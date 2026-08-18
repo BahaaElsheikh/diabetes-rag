@@ -1,0 +1,7 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pymupdf==1.24.10
+qdrant-client==1.11.1
+sentence-transformers==3.1.1
+pydantic==2.9.2
+python-multipart==0.0.9

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Diabetes RAG - Day 1 Demo</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --accent: #38bdf8;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #334155;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+  .app { width: 100%; max-width: 760px; }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+  .search-row { display: flex; gap: 8px; margin-bottom: 24px; }
+  input[type="text"] {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    font-size: 14px;
+  }
+  input[type="text"]:focus { outline: none; border-color: var(--accent); }
+  button {
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #0f172a;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .answer-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 20px;
+  }
+  .answer-card.refused { border-color: #f59e0b; }
+  .answer-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+  .citations { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .citation-pill {
+    font-size: 12px;
+    background: rgba(56, 189, 248, .12);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(56, 189, 248, .3);
+  }
+  .chunks-label { font-size: 13px; color: var(--muted); margin: 20px 0 10px; }
+  .chunk {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .chunk-meta { color: var(--muted); font-size: 11px; margin-bottom: 6px; }
+  .score { color: var(--accent); }
+  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 40px 0; }
+  .config-row { color: var(--muted); font-size: 11px; margin-top: 28px; text-align: center; }
+</style>
+</head>
+<body>
+  <div class="app">
+    <h1>Diabetes RAG Assistant &mdash; Day 1</h1>
+    <div class="subtitle">Grounded in NICE NG28 (Type 2 Diabetes in Adults: Management)</div>
+
+    <div class="search-row">
+      <input id="query" type="text" placeholder="e.g. What HbA1c target should be offered on lifestyle intervention alone?" />
+      <button id="askBtn" onclick="ask()">Ask</button>
+    </div>
+
+    <div id="result"></div>
+
+    <div class="config-row">API base: <span id="apiBase"></span> &mdash; edit at top of index.html if different</div>
+  </div>
+
+<script>
+  // Change this if your FastAPI server runs elsewhere.
+  const API_BASE = "http://localhost:8000";
+  document.getElementById("apiBase").textContent = API_BASE;
+
+  async function ask() {
+    const query = document.getElementById("query").value.trim();
+    const resultEl = document.getElementById("result");
+    const btn = document.getElementById("askBtn");
+    if (!query) return;
+
+    btn.disabled = true;
+    btn.textContent = "Searching...";
+    resultEl.innerHTML = '<div class="empty">Retrieving evidence...</div>';
+
+    try {
+      const res = await fetch(`${API_BASE}/ask`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, top_k: 5 }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      render(data);
+    } catch (err) {
+      resultEl.innerHTML = `<div class="empty">Could not reach the API at ${API_BASE}.<br/>Is the backend running? (${err.message})</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Ask";
+    }
+  }
+
+  function render(data) {
+    const resultEl = document.getElementById("result");
+    let html = `<div class="answer-card ${data.refused ? "refused" : ""}">
+      <div class="answer-label">${data.refused ? "Refused - insufficient evidence" : "Answer"}</div>
+      <div>${escapeHtml(data.answer)}</div>`;
+
+    if (data.citations && data.citations.length) {
+      html += '<div class="citations">' + data.citations.map(c =>
+        `<span class="citation-pill">${escapeHtml(c.document_name)} &middot; ${c.section_number ? "Sec " + c.section_number : "p." + c.page_number}</span>`
+      ).join("") + "</div>";
+    }
+    html += "</div>";
+
+    if (data.retrieved_chunks && data.retrieved_chunks.length) {
+      html += '<div class="chunks-label">Retrieved chunks (shown before generation, per Day 5 demo requirement)</div>';
+      html += data.retrieved_chunks.map(c => `
+        <div class="chunk">
+          <div class="chunk-meta">score: <span class="score">${c.score.toFixed(3)}</span></div>
+          ${escapeHtml(c.text)}
+        </div>
+      `).join("");
+    }
+
+    resultEl.innerHTML = html;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  document.getElementById("query").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") ask();
+  });
+</script>
+</body>
+</html>
