@@ -58,38 +58,39 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_query = update.message.text.strip()
     logger.info(f"Received query from chat {update.message.chat_id}: {user_query}")
 
-    # Send typing action indicator
-    await update.message.chat.send_action(action="typing")
-
-    api_url = os.environ.get("API_URL", "http://api.railway.internal:8000/ask")
-
-    response = None
     try:
-        async with httpx.AsyncClient(timeout=45.0) as client:
-            response = await client.post(
-                api_url,
-                json={"query": user_query, "top_k": 5},
-            )
-    except Exception as primary_err:
-        logger.warning(f"Connection to primary API URL '{api_url}' failed ({primary_err}). Trying fallback http://127.0.0.1:8000/ask...")
+        # Send typing action indicator
+        await update.message.chat.send_action(action="typing")
+
+        api_url = os.environ.get("API_URL", "http://api.railway.internal:8000/ask")
+
+        response = None
         try:
             async with httpx.AsyncClient(timeout=45.0) as client:
                 response = await client.post(
-                    "http://127.0.0.1:8000/ask",
+                    api_url,
                     json={"query": user_query, "top_k": 5},
                 )
-        except Exception as fallback_err:
-            logger.error(f"Fallback connection also failed: {fallback_err}")
-            raise primary_err
+        except Exception as primary_err:
+            logger.warning(f"Connection to primary API URL '{api_url}' failed ({primary_err}). Trying fallback http://127.0.0.1:8000/ask...")
+            try:
+                async with httpx.AsyncClient(timeout=45.0) as client:
+                    response = await client.post(
+                        "http://127.0.0.1:8000/ask",
+                        json={"query": user_query, "top_k": 5},
+                    )
+            except Exception as fallback_err:
+                logger.error(f"Fallback connection also failed: {fallback_err}")
+                raise primary_err
 
-    if response is None or response.status_code != 200:
-        err_text = response.text if response is not None else "No response"
-        status_code = response.status_code if response is not None else 500
-        logger.error(f"API returned status {status_code}: {err_text}")
-        await update.message.reply_text(
-            f"⚠️ Backend API returned error status {status_code}."
-        )
-        return
+        if response is None or response.status_code != 200:
+            err_text = response.text if response is not None else "No response"
+            status_code = response.status_code if response is not None else 500
+            logger.error(f"API returned status {status_code}: {err_text}")
+            await update.message.reply_text(
+                f"⚠️ Backend API returned error status {status_code}."
+            )
+            return
 
         data = response.json()
 
