@@ -47,16 +47,34 @@ def get_qdrant_client() -> QdrantClient:
         return _qdrant_client
 
     import socket
+
+    # 1. Try configured QDRANT_HOST
     try:
-        with socket.create_connection((QDRANT_HOST, QDRANT_PORT), timeout=0.2):
-            client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT, timeout=2.0)
+        host = QDRANT_HOST if QDRANT_HOST else "localhost"
+        with socket.create_connection((host, QDRANT_PORT), timeout=0.3):
+            client = QdrantClient(host=host, port=QDRANT_PORT, timeout=2.0)
             client.get_collections()
             _qdrant_client = client
             return client
     except Exception:
-        from src.config import PROJECT_ROOT
-        _qdrant_client = QdrantClient(path=str(PROJECT_ROOT / "data" / "qdrant_db"))
-        return _qdrant_client
+        pass
+
+    # 2. Try localhost fallback
+    try:
+        with socket.create_connection(("127.0.0.1", 6333), timeout=0.3):
+            client = QdrantClient(host="127.0.0.1", port=6333, timeout=2.0)
+            client.get_collections()
+            _qdrant_client = client
+            return client
+    except Exception:
+        pass
+
+    # 3. Fall back to embedded disk-based Qdrant
+    from src.config import PROJECT_ROOT
+    db_path = PROJECT_ROOT / "data" / "qdrant_db"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    _qdrant_client = QdrantClient(path=str(db_path))
+    return _qdrant_client
 
 
 def ensure_collection(client: QdrantClient) -> None:
@@ -84,6 +102,50 @@ def ensure_collection(client: QdrantClient) -> None:
             collection_name=QDRANT_COLLECTION,
             vectors_config=VectorParams(size=EMBEDDING_DIM, distance=Distance.COSINE),
         )
+
+    # Check if empty, auto-populate if 0 points
+    try:
+        count_res = client.count(QDRANT_COLLECTION)
+        if count_res.count == 0:
+            from src.config import CHUNKS_JSON_PATH
+            if CHUNKS_JSON_PATH.exists():
+                import json
+                from src.models.chunk import Chunk
+                print(f"Auto-populating empty collection {QDRANT_COLLECTION} from {CHUNKS_JSON_PATH}...")
+                with open(CHUNKS_JSON_PATH, "r", encoding="utf-8") as f:
+                    raw_data = json.load(f)
+                chunks = [Chunk(**d) for d in raw_data]
+                _auto_index_chunks(client, chunks)
+    except Exception as e:
+        print(f"Auto-population check warning: {e}")
+
+
+def _auto_index_chunks(client: QdrantClient, chunks: list[Chunk]) -> int:
+    if not chunks:
+        return 0
+    model = get_embedding_model()
+    texts = [c.text for c in chunks]
+    vectors = model.encode(texts, batch_size=16, normalize_embeddings=True, show_progress_bar=False)
+    points = [
+        PointStruct(
+            id=i,
+            vector=vectors[i].tolist(),
+            payload={
+                "chunk_id": chunks[i].chunk_id,
+                "document_name": chunks[i].document_name,
+                "section_number": chunks[i].section_number,
+                "section_title": chunks[i].section_title,
+                "page_number": chunks[i].page_number,
+                "text": chunks[i].text,
+                "related_sections": chunks[i].related_sections,
+                "patient_subgroup_tags": chunks[i].patient_subgroup_tags,
+            },
+        )
+        for i in range(len(chunks))
+    ]
+    client.upsert(collection_name=QDRANT_COLLECTION, points=points)
+    print(f"Successfully auto-indexed {len(points)} chunks into {QDRANT_COLLECTION}.")
+    return len(points)
 
 
 def index_chunks(chunks: list[Chunk]) -> int:
