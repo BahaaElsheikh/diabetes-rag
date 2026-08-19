@@ -18,8 +18,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("diabetes_rag_bot")
 
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000/ask")
+DEFAULT_BOT_TOKEN = "8960337678:AAG11DmdzhD12cjQHZOABDPPX5Kcjg0Z0Iw"
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or DEFAULT_BOT_TOKEN
+PORT = os.environ.get("PORT", "8000")
+API_URL = os.environ.get("API_URL", f"http://127.0.0.1:{PORT}/ask")
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -61,7 +63,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # Send typing action indicator
         await update.message.chat.send_action(action="typing")
 
-        api_url = os.environ.get("API_URL", "http://127.0.0.1:8000/ask")
+        port = os.environ.get("PORT", "8000")
+        api_url = os.environ.get("API_URL", f"http://127.0.0.1:{port}/ask")
 
         response = None
         try:
