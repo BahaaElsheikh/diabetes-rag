@@ -61,7 +61,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     # Send typing action indicator
     await update.message.chat.send_action(action="typing")
 
-    api_url = os.environ.get("API_URL", "http://127.0.0.1:8000/ask")
+    api_url = os.environ.get("API_URL", "http://api.railway.internal:8000/ask")
 
     response = None
     try:

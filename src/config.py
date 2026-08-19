@@ -17,7 +17,7 @@ DOCUMENT_SOURCE_URL = (
 )
 
 # --- Qdrant ---
-QDRANT_HOST = os.environ.get("QDRANT_HOST", "localhost")
+QDRANT_HOST = os.environ.get("QDRANT_HOST", "qdrant.railway.internal")
 QDRANT_PORT = int(os.environ.get("QDRANT_PORT", "6333"))
 QDRANT_COLLECTION = "diabetes_guidelines"
 

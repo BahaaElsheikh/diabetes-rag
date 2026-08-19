@@ -48,26 +48,19 @@ def get_qdrant_client() -> QdrantClient:
 
     import socket
 
-    # 1. Try configured QDRANT_HOST
-    try:
-        host = QDRANT_HOST if QDRANT_HOST else "qdrant"
-        with socket.create_connection((host, QDRANT_PORT), timeout=3.0):
-            client = QdrantClient(host=host, port=QDRANT_PORT, timeout=5.0)
-            client.get_collections()
-            _qdrant_client = client
-            return client
-    except Exception:
-        pass
-
-    # 2. Try localhost fallback
-    try:
-        with socket.create_connection(("127.0.0.1", 6333), timeout=1.0):
-            client = QdrantClient(host="127.0.0.1", port=6333, timeout=5.0)
-            client.get_collections()
-            _qdrant_client = client
-            return client
-    except Exception:
-        pass
+    # 1. Try configured QDRANT_HOST or qdrant.railway.internal
+    hosts_to_try = [QDRANT_HOST, "qdrant.railway.internal", "qdrant", "127.0.0.1", "localhost"]
+    for host in hosts_to_try:
+        if not host:
+            continue
+        try:
+            with socket.create_connection((host, QDRANT_PORT), timeout=2.0):
+                client = QdrantClient(host=host, port=QDRANT_PORT, timeout=5.0)
+                client.get_collections()
+                _qdrant_client = client
+                return client
+        except Exception:
+            continue
 
     # 3. Fall back to embedded disk-based Qdrant
     from src.config import PROJECT_ROOT
