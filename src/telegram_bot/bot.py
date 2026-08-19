@@ -62,26 +62,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # Send typing action indicator
         await update.message.chat.send_action(action="typing")
 
-        api_url = os.environ.get("API_URL", "http://api.railway.internal:8000/ask")
+        api_url = os.environ.get("API_URL", "http://127.0.0.1:8000/ask")
 
         response = None
         try:
-            async with httpx.AsyncClient(timeout=45.0) as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
                     api_url,
                     json={"query": user_query, "top_k": 5},
                 )
         except Exception as primary_err:
-            logger.warning(f"Connection to primary API URL '{api_url}' failed ({primary_err}). Trying fallback http://127.0.0.1:8000/ask...")
-            try:
-                async with httpx.AsyncClient(timeout=45.0) as client:
-                    response = await client.post(
-                        "http://127.0.0.1:8000/ask",
-                        json={"query": user_query, "top_k": 5},
-                    )
-            except Exception as fallback_err:
-                logger.error(f"Fallback connection also failed: {fallback_err}")
-                raise primary_err
+            logger.error(f"Error calling RAG API at {api_url}: {primary_err}", exc_info=True)
+            await update.message.reply_text(
+                f"⚠️ Error communicating with internal RAG backend ({api_url}): {str(primary_err)}"
+            )
+            return
 
         if response is None or response.status_code != 200:
             err_text = response.text if response is not None else "No response"
@@ -158,7 +153,7 @@ def main() -> None:
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     print("=== TELEGRAM BOT LONG POLLING STARTED SUCCESSFULLY ===", flush=True)
-    app.run_polling()
+    app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
