@@ -60,10 +60,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     # Send typing action indicator
     await update.message.chat.send_action(action="typing")
 
+    api_url = os.environ.get("API_URL", "http://127.0.0.1:8000/ask")
+    if api_url == "http://api:8000/ask":
+        api_url = "http://127.0.0.1:8000/ask"
+
     try:
         async with httpx.AsyncClient(timeout=45.0) as client:
             response = await client.post(
-                API_URL,
+                api_url,
                 json={"query": user_query, "top_k": 5},
             )
 
