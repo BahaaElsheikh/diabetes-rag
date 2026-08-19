@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from src.config import QDRANT_COLLECTION, RERANK_CANDIDATE_K
-from src.ingestion.embedder import embed_query, get_qdrant_client
+from src.ingestion.embedder import embed_query, get_qdrant_client, ensure_collection
 
 
 from dataclasses import dataclass, field
@@ -44,6 +44,7 @@ def search(
 
     score_threshold filters out weak matches - this is the retrieval-side
     half of the Safety Layer's "insufficient evidence -> refuse" behavior.
+    """
     client = get_qdrant_client()
     ensure_collection(client)
 
