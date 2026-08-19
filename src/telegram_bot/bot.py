@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("diabetes_rag_bot")
 
-DEFAULT_BOT_TOKEN = "8960337678:AAG11DmdzhD12cjQHZOABDPPX5Kcjg0Z0Iw"
+DEFAULT_BOT_TOKEN = "8891659055:AAEhcDFlqN192wGJwpqjTBuCsUINe68TQYc"
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or DEFAULT_BOT_TOKEN
 PORT = os.environ.get("PORT", "8000")
 API_URL = os.environ.get("API_URL", f"http://127.0.0.1:{PORT}/ask")

@@ -5,7 +5,7 @@ set -e
 PORT="${PORT:-8000}"
 
 # Auto-launch Telegram Bot background worker if token is provided or fallback token is available
-BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-8960337678:AAG11DmdzhD12cjQHZOABDPPX5Kcjg0Z0Iw}"
+BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-8891659055:AAEhcDFlqN192wGJwpqjTBuCsUINe68TQYc}"
 
 if [ -n "${BOT_TOKEN}" ]; then
     echo "[entrypoint] Telegram bot token detected. Starting Telegram Bot worker..."
