@@ -19,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger("diabetes_rag_bot")
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-API_URL = os.environ.get("API_URL", "http://api:8000/ask")
+API_URL = os.environ.get("API_URL", "http://localhost:8000/ask")
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -127,8 +127,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 def main() -> None:
     if not TELEGRAM_BOT_TOKEN:
-        logger.error("TELEGRAM_BOT_TOKEN environment variable is not set!")
-        sys.exit(1)
+        logger.warning("TELEGRAM_BOT_TOKEN environment variable is not set! Bot worker disabled.")
+        return
 
     logger.info(f"Starting Telegram Bot... Connecting to API at: {API_URL}")
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
