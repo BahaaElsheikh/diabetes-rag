@@ -2,8 +2,8 @@
 Retrieval evaluation harness (Bi-encoder vs Cross-encoder Reranker).
 
 Loads test_queries.json, runs each query through the retrieval pipeline,
-computes Mean Precision@k, Mean Recall@k, Mean F1@k, Refusal accuracy, and Average latency,
-then saves per-query results to a timestamped JSON file.
+computes Mean Precision@k, Mean Recall@k, Mean F1@k, Refusal accuracy, and Average latency
+(with Cold-Start vs Steady-State isolation), then saves per-query results to JSON.
 
 Usage:
     python -m src.evaluation.run_eval --k 5
@@ -29,6 +29,7 @@ def _run_single_query(
     score_threshold: float,
     use_reranker: bool,
     collection_name: str | None,
+    use_query_rewrite: bool = False,
 ):
     """Run one retrieval query, return (results, latency_ms)."""
     from src.retrieval.search import search
@@ -39,7 +40,8 @@ def _run_single_query(
         top_k=top_k,
         score_threshold=score_threshold,
         use_reranker=use_reranker,
-        candidate_k=20,
+        candidate_k=None,  # Pulls from src.config.RERANK_CANDIDATE_K
+        use_query_rewrite=use_query_rewrite,
     )
     latency_ms = (time.perf_counter() - t0) * 1000
     return results, latency_ms
@@ -47,13 +49,30 @@ def _run_single_query(
 
 def run_eval(
     top_k: int = 5,
-    score_threshold: float = 0.35,
+    score_threshold: float | None = None,
     use_reranker: bool = True,
     collection_name: str | None = None,
     label: str = "",
+    candidate_k: int | None = None,
+    use_query_rewrite: bool = False,
 ) -> dict:
     """Execute the full evaluation and return the summary dict."""
-    from src.config import QDRANT_COLLECTION
+    from src.config import (
+        EMBEDDING_MODEL_NAME,
+        QDRANT_COLLECTION,
+        RERANK_CANDIDATE_K,
+        RERANK_SCORE_THRESHOLD,
+        RERANKER_MODEL_NAME,
+    )
+
+    if candidate_k is not None:
+        import src.config
+        src.config.RERANK_CANDIDATE_K = candidate_k
+
+    if score_threshold is None:
+        score_threshold = RERANK_SCORE_THRESHOLD
+
+    from src.config import RERANK_CANDIDATE_K
 
     if collection_name is None:
         collection_name = QDRANT_COLLECTION
@@ -80,7 +99,7 @@ def run_eval(
             relevant_sections = [q["expected_section"]]
 
         results, latency_ms = _run_single_query(
-            query_text, top_k, score_threshold, use_reranker, collection_name
+            query_text, top_k, score_threshold, use_reranker, collection_name, use_query_rewrite
         )
         total_latency += latency_ms
 
@@ -125,7 +144,7 @@ def run_eval(
     for q in out_of_scope:
         query_text = q["query"]
         results, latency_ms = _run_single_query(
-            query_text, top_k, score_threshold, use_reranker, collection_name
+            query_text, top_k, score_threshold, use_reranker, collection_name, use_query_rewrite
         )
         total_latency += latency_ms
 
@@ -153,9 +172,17 @@ def run_eval(
     mean_recall = sum(recalls) / n_in if n_in else 0.0
     mean_f1 = sum(f1s) / n_in if n_in else 0.0
     refusal_acc = refusal_correct / n_out if n_out else 0.0
-    mean_latency = total_latency / len(test_queries) if test_queries else 0.0
 
-    mode_label = "With reranker" if use_reranker else "Bi-encoder only"
+    all_latencies = [qres["latency_ms"] for qres in per_query_results]
+    cold_start_latency = all_latencies[0] if all_latencies else 0.0
+    steady_state_latency = (
+        sum(all_latencies[1:]) / len(all_latencies[1:])
+        if len(all_latencies) > 1
+        else cold_start_latency
+    )
+    overall_mean_latency = sum(all_latencies) / len(all_latencies) if all_latencies else 0.0
+
+    mode_label = f"cand_k={RERANK_CANDIDATE_K}_model={RERANKER_MODEL_NAME.split('/')[-1]}" if use_reranker else "no_rerank"
     final_label = label if label else mode_label
 
     summary = {
@@ -167,13 +194,18 @@ def run_eval(
             "top_k": top_k,
             "score_threshold": score_threshold,
             "use_reranker": use_reranker,
+            "candidate_k": RERANK_CANDIDATE_K,
+            "embedding_model": EMBEDDING_MODEL_NAME,
+            "reranker_model": RERANKER_MODEL_NAME,
         },
         "metrics": {
             "mean_precision_at_k": round(mean_precision, 4),
             "mean_recall_at_k": round(mean_recall, 4),
             "mean_f1_at_k": round(mean_f1, 4),
             "refusal_accuracy": round(refusal_acc, 4),
-            "mean_latency_ms": round(mean_latency, 1),
+            "mean_latency_ms": round(overall_mean_latency, 1),
+            "cold_start_latency_ms": round(cold_start_latency, 1),
+            "steady_state_latency_ms": round(steady_state_latency, 1),
             "in_scope_queries": n_in,
             "out_of_scope_queries": n_out,
         },
@@ -203,38 +235,31 @@ def print_summary(summary: dict) -> None:
 
     print(f"\n{'='*65}")
     print(f"  EVALUATION SUMMARY: {label}")
-    print(f"  Mode       : {'With Reranker' if c['use_reranker'] else 'Bi-encoder Only'}")
-    print(f"  Collection : {c['collection_name']}")
-    print(f"  top_k (k)  : {k}")
-    print(f"  threshold  : {c['score_threshold']}")
+    print(f"  Mode            : {'With Reranker' if c['use_reranker'] else 'Bi-encoder Only'}")
+    print(f"  Embedding Model : {c.get('embedding_model', 'N/A')}")
+    print(f"  Reranker Model  : {c.get('reranker_model', 'N/A')}")
+    print(f"  Candidate K     : {c.get('candidate_k', 'N/A')}")
+    print(f"  Collection      : {c['collection_name']}")
+    print(f"  top_k (k)       : {k}")
+    print(f"  threshold       : {c['score_threshold']}")
     print(f"{'='*65}")
     print(f"  Mean Precision@{k} : {m['mean_precision_at_k']:.4f} ({m['mean_precision_at_k']:.2%})")
     print(f"  Mean Recall@{k}    : {m['mean_recall_at_k']:.4f} ({m['mean_recall_at_k']:.2%})")
     print(f"  Mean F1@{k}        : {m['mean_f1_at_k']:.4f} ({m['mean_f1_at_k']:.2%})")
     print(f"  Refusal accuracy  : {m['refusal_accuracy']:.4f} ({m['refusal_accuracy']:.2%})")
-    print(f"  Mean latency      : {m['mean_latency_ms']:.1f} ms")
+    print(f"  Cold-Start (Q#1)  : {m['cold_start_latency_ms']:.1f} ms")
+    print(f"  Steady-State(Q2-20): {m['steady_state_latency_ms']:.1f} ms")
+    print(f"  Overall Mean Latency: {m['mean_latency_ms']:.1f} ms")
     print(f"{'='*65}\n")
-
-    print(f"{'PER-QUERY BREAKDOWN':^65}")
-    print("-" * 65)
-    for qres in summary["per_query"]:
-        if qres["out_of_scope"]:
-            status = "REFUSED (OK)" if qres["correctly_refused"] else "FAILED TO REFUSE"
-            print(f"[OOS] {qres['query'][:45]:45s} | {status:18s} | {qres['latency_ms']:6.1f}ms")
-        else:
-            p = qres["precision_at_k"]
-            r = qres["recall_at_k"]
-            f1 = qres["f1_at_k"]
-            ret_secs = ", ".join(qres["returned_sections"][:3])
-            print(f"[IN ] {qres['query'][:35]:35s} | P@{k}={p:.2f} R@{k}={r:.2f} F1={f1:.2f} | secs:[{ret_secs}] | {qres['latency_ms']:6.1f}ms")
-    print("=" * 65 + "\n")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Run retrieval evaluation")
     parser.add_argument("-k", "--k", type=int, default=5, help="top_k results (default: 5)")
     parser.add_argument("--top_k", type=int, default=None, help="Alias for --k")
-    parser.add_argument("--threshold", type=float, default=0.35, help="Score threshold")
+    parser.add_argument("--threshold", type=float, default=None, help="Score threshold (default: config value)")
+    parser.add_argument("--candidate_k", type=int, default=None, help="Candidate K for reranker (default: config value)")
+    parser.add_argument("--query-rewrite", action="store_true", default=False, help="Enable LLM query rewriting before retrieval")
     parser.add_argument("--no-rerank", action="store_true", default=False, help="Disable CrossEncoder reranker")
     parser.add_argument("--collection", type=str, default=None, help="Override Qdrant collection name")
     parser.add_argument("--label", type=str, default="", help="Label for this run")
@@ -243,7 +268,16 @@ def main():
 
     top_k = args.top_k if args.top_k is not None else args.k
     use_reranker = not args.no_rerank
-    mode_tag = "no_rerank" if args.no_rerank else "with_reranker"
+    use_query_rewrite = args.query_rewrite
+
+    if args.candidate_k is not None:
+        import src.config
+        src.config.RERANK_CANDIDATE_K = args.candidate_k
+
+    from src.config import EMBEDDING_MODEL_NAME, RERANK_CANDIDATE_K
+    model_short = EMBEDDING_MODEL_NAME.split('/')[-1]
+    qr_tag = "_qr" if use_query_rewrite else ""
+    mode_tag = f"{model_short}_cand_k_{RERANK_CANDIDATE_K}{qr_tag}" if use_reranker else f"{model_short}_no_rerank{qr_tag}"
     run_label = args.label if args.label else mode_tag
 
     summary = run_eval(
@@ -252,6 +286,8 @@ def main():
         use_reranker=use_reranker,
         collection_name=args.collection,
         label=run_label,
+        candidate_k=args.candidate_k,
+        use_query_rewrite=use_query_rewrite,
     )
 
     print_summary(summary)

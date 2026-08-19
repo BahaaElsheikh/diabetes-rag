@@ -29,7 +29,45 @@ class Chunk:
     section_title: str | None
     page_number: int
     text: str
+    related_sections: list[str] = field(default_factory=list)
+    patient_subgroup_tags: list[str] = field(default_factory=list)
     metadata: dict = field(default_factory=dict)
+
+
+_CROSS_REF_RE = re.compile(r"section\s+(\d+\.\d+(?:\.\d+)?)", re.IGNORECASE)
+
+
+def _extract_related_sections(text: str, current_section: str | None) -> list[str]:
+    """Find cross-referenced section numbers in text (excluding current section)."""
+    matches = _CROSS_REF_RE.findall(text)
+    seen = []
+    for m in matches:
+        if m != current_section and m not in seen:
+            seen.append(m)
+    return seen
+
+
+def _extract_subgroup_tags(text: str) -> list[str]:
+    """Map keywords in text to patient subgroup tags."""
+    t_lower = text.lower()
+    tags = []
+
+    if any(kw in t_lower for kw in ["heart failure", "ascvd", "cardiovascular", "stroke", "angina", "myocardial infarction"]):
+        tags.append("cardiovascular_disease")
+
+    if any(kw in t_lower for kw in ["kidney disease", "ckd", "egfr", "acr", "microalbuminuria", "nephropathy"]):
+        tags.append("ckd")
+
+    if any(kw in t_lower for kw in ["frail", "frailty", "elderly", "life expectancy", "comorbidities"]):
+        tags.append("frailty")
+
+    if any(kw in t_lower for kw in ["young adult", "early-onset", "age under 40", "younger adult"]):
+        tags.append("early_onset")
+
+    if not tags:
+        tags.append("general")
+
+    return tags
 
 
 def _build_offset_to_page_map(pages: list[PageText]) -> tuple[str, list[tuple[int, int]]]:
@@ -81,6 +119,9 @@ def chunk_pages(pages: list[PageText], document_name: str = DOCUMENT_NAME) -> li
         page_number = _page_for_offset(start, offset_map)
         title = _nearest_title_above(full_text, start)
 
+        related = _extract_related_sections(body, section_number)
+        subgroup_tags = _extract_subgroup_tags(body)
+
         chunks.append(
             Chunk(
                 chunk_id=f"{document_name}::{section_number}",
@@ -89,6 +130,8 @@ def chunk_pages(pages: list[PageText], document_name: str = DOCUMENT_NAME) -> li
                 section_title=title,
                 page_number=page_number,
                 text=body,
+                related_sections=related,
+                patient_subgroup_tags=subgroup_tags,
             )
         )
 
@@ -98,6 +141,8 @@ def chunk_pages(pages: list[PageText], document_name: str = DOCUMENT_NAME) -> li
     if not chunks:
         for p in pages:
             if len(p.text) >= MIN_CHUNK_CHARS:
+                related = _extract_related_sections(p.text, None)
+                subgroup_tags = _extract_subgroup_tags(p.text)
                 chunks.append(
                     Chunk(
                         chunk_id=f"{document_name}::page-{p.page_number}",
@@ -106,6 +151,8 @@ def chunk_pages(pages: list[PageText], document_name: str = DOCUMENT_NAME) -> li
                         section_title=None,
                         page_number=p.page_number,
                         text=p.text,
+                        related_sections=related,
+                        patient_subgroup_tags=subgroup_tags,
                     )
                 )
     return chunks

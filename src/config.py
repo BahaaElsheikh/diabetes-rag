@@ -1,4 +1,4 @@
-"""Shared configuration for the Diabetes RAG pipeline (Day 1)."""
+"""Shared configuration for the Diabetes RAG pipeline (Day 1 & Day 2)."""
 
 import os
 from pathlib import Path
@@ -22,9 +22,15 @@ QDRANT_PORT = int(os.environ.get("QDRANT_PORT", "6333"))
 QDRANT_COLLECTION = "diabetes_guidelines"
 
 # --- Embeddings ---
-# Small, CPU-friendly model. Swap for "BAAI/bge-large-en-v1.5" if you have a GPU.
-EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
-EMBEDDING_DIM = 384  # must match the model above
+# Large high-accuracy embedding model (1024 dimensions)
+EMBEDDING_MODEL_NAME = "BAAI/bge-large-en-v1.5"
+EMBEDDING_DIM = 1024  # must match the model above
+
+# --- Reranker (Optimized Configuration) ---
+RERANK_CANDIDATE_K = 5
+RERANK_TOP_K = 5
+RERANK_SCORE_THRESHOLD = 0.5
+RERANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 # --- Chunking ---
 # NICE numbers every recommendation like "1.6.1", "1.6.2" ... we use that

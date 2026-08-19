@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Diabetes RAG - Day 1 Demo</title>
+<title>Diabetes RAG - Day 3 Grounded Generation</title>
 <style>
   :root {
     --bg: #0f172a;
@@ -11,6 +11,8 @@
     --text: #e2e8f0;
     --muted: #94a3b8;
     --border: #334155;
+    --warning: #f59e0b;
+    --success: #10b981;
   }
   * { box-sizing: border-box; }
   body {
@@ -22,8 +24,8 @@
     justify-content: center;
     padding: 32px 16px;
   }
-  .app { width: 100%; max-width: 760px; }
-  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .app { width: 100%; max-width: 800px; }
+  h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; color: var(--accent); }
   .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
   .search-row { display: flex; gap: 8px; margin-bottom: 24px; }
   input[type="text"] {
@@ -47,15 +49,44 @@
     font-size: 14px;
   }
   button:disabled { opacity: 0.5; cursor: default; }
+  
   .answer-card {
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 18px;
-    margin-bottom: 20px;
+    padding: 20px;
+    margin-bottom: 24px;
   }
-  .answer-card.refused { border-color: #f59e0b; }
-  .answer-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+  .answer-card.refused { border-color: var(--warning); }
+  .answer-card.success { border-color: rgba(16, 185, 129, 0.4); }
+  
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+  }
+  .badge.success-badge { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+  .badge.refusal-badge { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+  .rec-text { font-size: 15px; line-height: 1.6; margin-bottom: 14px; color: var(--text); }
+  
+  .excerpt-box {
+    background: rgba(15, 23, 42, 0.6);
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-style: italic;
+    color: #cbd5e1;
+    margin-bottom: 14px;
+  }
+  .excerpt-label { font-size: 11px; font-style: normal; font-weight: 600; color: var(--accent); margin-bottom: 4px; text-transform: uppercase; }
+
   .citations { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
   .citation-pill {
     font-size: 12px;
@@ -65,7 +96,10 @@
     border-radius: 999px;
     border: 1px solid rgba(56, 189, 248, .3);
   }
-  .chunks-label { font-size: 13px; color: var(--muted); margin: 20px 0 10px; }
+  
+  .latency-row { font-size: 11px; color: var(--muted); margin-top: 14px; pt: 10px; border-top: 1px dashed var(--border); }
+
+  .chunks-label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 24px 0 12px; }
   .chunk {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -76,19 +110,19 @@
     font-size: 13px;
     line-height: 1.5;
   }
-  .chunk-meta { color: var(--muted); font-size: 11px; margin-bottom: 6px; }
-  .score { color: var(--accent); }
+  .chunk-meta { color: var(--muted); font-size: 11px; margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .score { color: var(--accent); font-weight: 600; }
   .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 40px 0; }
   .config-row { color: var(--muted); font-size: 11px; margin-top: 28px; text-align: center; }
 </style>
 </head>
 <body>
   <div class="app">
-    <h1>Diabetes RAG Assistant &mdash; Day 1</h1>
-    <div class="subtitle">Grounded in NICE NG28 (Type 2 Diabetes in Adults: Management)</div>
+    <h1>Diabetes RAG Assistant &mdash; Day 3</h1>
+    <div class="subtitle">Grounded Generation & Citation (NICE NG28 Guideline)</div>
 
     <div class="search-row">
-      <input id="query" type="text" placeholder="e.g. What HbA1c target should be offered on lifestyle intervention alone?" />
+      <input id="query" type="text" placeholder="e.g. What HbA1c target should be offered to a patient managed by lifestyle and diet alone?" />
       <button id="askBtn" onclick="ask()">Ask</button>
     </div>
 
@@ -98,7 +132,6 @@
   </div>
 
 <script>
-  // Change this if your FastAPI server runs elsewhere.
   const API_BASE = "http://localhost:8000";
   document.getElementById("apiBase").textContent = API_BASE;
 
@@ -109,8 +142,8 @@
     if (!query) return;
 
     btn.disabled = true;
-    btn.textContent = "Searching...";
-    resultEl.innerHTML = '<div class="empty">Retrieving evidence...</div>';
+    btn.textContent = "Processing...";
+    resultEl.innerHTML = '<div class="empty">Retrieving evidence & generating grounded answer...</div>';
 
     try {
       const res = await fetch(`${API_BASE}/ask`, {
@@ -131,22 +164,48 @@
 
   function render(data) {
     const resultEl = document.getElementById("result");
-    let html = `<div class="answer-card ${data.refused ? "refused" : ""}">
-      <div class="answer-label">${data.refused ? "Refused - insufficient evidence" : "Answer"}</div>
-      <div>${escapeHtml(data.answer)}</div>`;
+    
+    let html = `<div class="answer-card ${data.refused ? "refused" : "success"}">`;
+    
+    if (data.refused) {
+      html += `<div class="badge refusal-badge">Refused &middot; ${data.refusal_reason || "Insufficient Evidence"}</div>`;
+      html += `<div class="rec-text">${escapeHtml(data.recommendation)}</div>`;
+    } else {
+      html += `<div class="badge success-badge">Grounded Recommendation</div>`;
+      html += `<div class="rec-text">${escapeHtml(data.recommendation)}</div>`;
+      
+      if (data.supporting_excerpt) {
+        html += `<div class="excerpt-box">
+          <div class="excerpt-label">Supporting Excerpt (from Guideline)</div>
+          "${escapeHtml(data.supporting_excerpt)}"
+        </div>`;
+      }
 
-    if (data.citations && data.citations.length) {
-      html += '<div class="citations">' + data.citations.map(c =>
-        `<span class="citation-pill">${escapeHtml(c.document_name)} &middot; ${c.section_number ? "Sec " + c.section_number : "p." + c.page_number}</span>`
-      ).join("") + "</div>";
+      if (data.citations && data.citations.length) {
+        html += '<div class="citations">' + data.citations.map(c =>
+          `<span class="citation-pill">${escapeHtml(c.document_name)} &middot; ${c.section_number ? "Sec " + c.section_number : "p." + c.page_number}</span>`
+        ).join("") + "</div>";
+      }
     }
+
+    if (data.latency_ms) {
+      html += `<div class="latency-row">
+        Latency Breakdown: Retrieval & Rerank: <strong>${data.latency_ms.retrieval_and_rerank_ms} ms</strong> | 
+        LLM Gen: <strong>${data.latency_ms.llm_ms} ms</strong> | 
+        Total: <strong>${data.latency_ms.total_ms} ms</strong>
+      </div>`;
+    }
+
     html += "</div>";
 
     if (data.retrieved_chunks && data.retrieved_chunks.length) {
-      html += '<div class="chunks-label">Retrieved chunks (shown before generation, per Day 5 demo requirement)</div>';
+      html += '<div class="chunks-label">Retrieved Evidence Chunks (Shown before generation, per Day 5 demo requirement)</div>';
       html += data.retrieved_chunks.map(c => `
         <div class="chunk">
-          <div class="chunk-meta">score: <span class="score">${c.score.toFixed(3)}</span></div>
+          <div class="chunk-meta">
+            <span>${escapeHtml(c.document_name)} ${c.section_number ? "&middot; Sec " + c.section_number : ""}</span>
+            <span>Reranker Score: <span class="score">${c.score.toFixed(3)}</span></span>
+          </div>
           ${escapeHtml(c.text)}
         </div>
       `).join("");

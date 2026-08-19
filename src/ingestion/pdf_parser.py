@@ -12,8 +12,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-# pyrefly: ignore [missing-import]
-import fitz  # PyMuPDF
+import pymupdf as fitz
 
 
 @dataclass

@@ -1,0 +1,144 @@
+"""
+Telegram Bot service for Diabetes RAG.
+Connects Telegram user messages to the FastAPI grounded generation backend.
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+import sys
+import httpx
+from telegram import Update
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
+logger = logging.getLogger("diabetes_rag_bot")
+
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+API_URL = os.environ.get("API_URL", "http://api:8000/ask")
+
+
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /start command."""
+    if not update.message:
+        return
+    welcome_text = (
+        "🩺 *Diabetes RAG Clinical Assistant*\n\n"
+        "Welcome! I provide evidence-based recommendations on Type 2 Diabetes Management "
+        "grounded directly in the NICE NG28 clinical guidelines.\n\n"
+        "Simply send me a clinical query or question (e.g., 'What is the first-line drug treatment for Type 2 diabetes?')."
+    )
+    await update.message.reply_text(welcome_text, parse_mode="Markdown")
+
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /help command."""
+    if not update.message:
+        return
+    help_text = (
+        "💡 *How to use Diabetes RAG Bot:*\n\n"
+        "• Send any clinical query regarding Type 2 Diabetes management.\n"
+        "• All answers are grounded strictly in official NICE guidelines.\n"
+        "• Responses include exact clinical recommendations, supporting excerpts, and citations.\n"
+        "• If the guidelines do not contain enough evidence, I will refuse rather than hallucinate."
+    )
+    await update.message.reply_text(help_text, parse_mode="Markdown")
+
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle incoming text messages and query the RAG API backend."""
+    if not update.message or not update.message.text:
+        return
+
+    user_query = update.message.text.strip()
+    logger.info(f"Received query from chat {update.message.chat_id}: {user_query}")
+
+    # Send typing action indicator
+    await update.message.chat.send_action(action="typing")
+
+    try:
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            response = await client.post(
+                API_URL,
+                json={"query": user_query, "top_k": 5},
+            )
+
+        if response.status_code != 200:
+            logger.error(f"API returned status {response.status_code}: {response.text}")
+            await update.message.reply_text(
+                f"⚠️ Backend API returned error status {response.status_code}."
+            )
+            return
+
+        data = response.json()
+
+        # Check refusal
+        if data.get("refused"):
+            reason = data.get("refusal_reason") or "Insufficient grounded evidence."
+            reply_msg = (
+                "⚠️ *Query Refused*\n\n"
+                "I could not find sufficient grounded evidence in the NICE guidelines to answer your query.\n\n"
+                f"*Reason:* `{reason}`"
+            )
+            await update.message.reply_text(reply_msg, parse_mode="Markdown")
+            return
+
+        recommendation = data.get("recommendation", "N/A")
+        supporting_excerpt = data.get("supporting_excerpt", "")
+        citations = data.get("citations", [])
+
+        citations_formatted = []
+        for c in citations:
+            doc = c.get("document_name", "NICE Guideline")
+            sec = c.get("section_number")
+            page = c.get("page_number")
+            sec_str = f"Sec {sec}, " if sec else ""
+            citations_formatted.append(f"• {doc} ({sec_str}p. {page})")
+
+        citations_str = "\n".join(citations_formatted) if citations_formatted else "• NICE NG28 Guideline"
+
+        formatted_reply = (
+            f"📋 *Clinical Recommendation:*\n{recommendation}\n\n"
+            f"💬 *Supporting Excerpt:*\n\"{supporting_excerpt}\"\n\n"
+            f"📚 *Citations:*\n{citations_str}"
+        )
+
+        try:
+            await update.message.reply_text(formatted_reply, parse_mode="Markdown")
+        except Exception as parse_err:
+            logger.warning(f"Markdown parsing error: {parse_err}. Retrying without markdown mode.")
+            plain_reply = (
+                f"📋 Clinical Recommendation:\n{recommendation}\n\n"
+                f"💬 Supporting Excerpt:\n\"{supporting_excerpt}\"\n\n"
+                f"📚 Citations:\n{citations_str}"
+            )
+            await update.message.reply_text(plain_reply)
+
+    except Exception as e:
+        logger.error(f"Error handling message: {e}", exc_info=True)
+        await update.message.reply_text(
+            f"⚠️ An error occurred while communicating with the RAG API backend: {str(e)}"
+        )
+
+
+def main() -> None:
+    if not TELEGRAM_BOT_TOKEN:
+        logger.error("TELEGRAM_BOT_TOKEN environment variable is not set!")
+        sys.exit(1)
+
+    logger.info(f"Starting Telegram Bot... Connecting to API at: {API_URL}")
+    app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    app.run_polling()
+
+
+if __name__ == "__main__":
+    main()

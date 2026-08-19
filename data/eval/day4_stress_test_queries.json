@@ -1,0 +1,221 @@
+[
+  {
+    "query": "What is the recommended target HbA1c level for adults with type 2 diabetes?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.5.7", "1.5.8"],
+    "reasoning": "Directly addressed in Section 1.5.7 (48 mmol/mol for lifestyle/diet) and 1.5.8 (53 mmol/mol for drug-managed)."
+  },
+  {
+    "query": "What is the recommended first-line drug treatment for type 2 diabetes with no relevant comorbidities?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.13.1", "1.13.2"],
+    "reasoning": "Section 1.13.1 explicitly recommends metformin as first-line."
+  },
+  {
+    "query": "What treatment is recommended for adults with type 2 diabetes and atherosclerotic cardiovascular disease?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.11.1", "1.15.1", "1.27.1"],
+    "reasoning": "Section 1.15.1 covers ASCVD-specific treatment recommendations."
+  },
+  {
+    "query": "When should structured education be offered to adults newly diagnosed with type 2 diabetes?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.2.1"],
+    "reasoning": "Section 1.2.1 addresses timing of structured education."
+  },
+  {
+    "query": "What nutritional advice should be provided to adults with type 2 diabetes?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.3.1", "1.3.3"],
+    "reasoning": "Dietary advice is covered in sections 1.3.x."
+  },
+  {
+    "query": "How often should HbA1c levels be measured in adults with type 2 diabetes?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.5.1"],
+    "reasoning": "Section 1.5.1 specifies measurement intervals."
+  },
+  {
+    "query": "Should adults with type 2 diabetes routinely self-monitor capillary blood glucose?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.6.2", "1.6.3"],
+    "reasoning": "Self-monitoring guidance is in Section 1.6.x."
+  },
+  {
+    "query": "Which adults with type 2 diabetes should be offered continuous glucose monitoring?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.7.1"],
+    "reasoning": "CGM eligibility criteria in Section 1.7.1."
+  },
+  {
+    "query": "What medicines should be offered to adults with type 2 diabetes who have heart failure?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.14.1", "1.14.2", "1.26.1"],
+    "reasoning": "Heart failure drug choices covered in 1.14.x."
+  },
+  {
+    "query": "What medicines are recommended for adults with type 2 diabetes and chronic kidney disease?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.18.1", "1.18.2", "1.30.1"],
+    "reasoning": "CKD-specific treatment in 1.18.x."
+  },
+  {
+    "query": "What type of insulin is recommended as initial insulin therapy for adults with type 2 diabetes?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.33.1", "1.33.2"],
+    "reasoning": "Initial insulin type covered in 1.33.x."
+  },
+  {
+    "query": "When should a person newly diagnosed with type 2 diabetes be referred for eye screening?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.43.1"],
+    "reasoning": "Eye screening referral timing in 1.43.1."
+  },
+  {
+    "query": "What information should be given to adults with type 2 diabetes about periodontitis risk?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.37.1"],
+    "reasoning": "Periodontitis risk communication in 1.37.1."
+  },
+  {
+    "query": "When should gastroparesis be suspected in an adult with type 2 diabetes?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.38.1", "1.40.1"],
+    "reasoning": "Gastroparesis suspicion criteria in 1.38.1."
+  },
+  {
+    "query": "How should initial medicines be introduced when starting combination therapy for type 2 diabetes?",
+    "category": "in_scope",
+    "expected_behavior": "answer",
+    "relevant_sections": ["1.20.2"],
+    "reasoning": "Section 1.20.2 covers stepwise introduction of combination therapy."
+  },
+
+  {
+    "query": "What is the best diabetes medication for an elderly patient with multiple comorbidities?",
+    "category": "ambiguous",
+    "expected_behavior": "refuse",
+    "relevant_sections": [],
+    "reasoning": "Underspecified: 'elderly' and 'multiple comorbidities' are vague. The guideline has specific sections for frailty (1.9.x) and specific comorbidities (CKD, CVD, HF) but doesn't provide a single 'best medication' across undefined comorbidities. System should refuse or request clarification."
+  },
+  {
+    "query": "Should I take metformin before or after meals?",
+    "category": "ambiguous",
+    "expected_behavior": "refuse",
+    "relevant_sections": [],
+    "reasoning": "The NICE NG28 guideline covers WHEN to prescribe metformin but does not specify meal-timing dosing instructions. This is a pharmacist/prescriber-level question outside the guideline's scope."
+  },
+  {
+    "query": "What is the HbA1c target for a patient with diabetes?",
+    "category": "ambiguous",
+    "expected_behavior": "partial_with_caveat",
+    "relevant_sections": ["1.5.7", "1.5.8"],
+    "reasoning": "Ambiguous because it doesn't specify type 1 vs type 2 or management approach. NG28 is type 2 only and has different targets for lifestyle-managed (48 mmol/mol) vs drug-managed (53 mmol/mol). System should answer with caveats about which target applies to which subgroup, or clarify it's for type 2 only."
+  },
+  {
+    "query": "Can a patient with type 2 diabetes safely fast during Ramadan?",
+    "category": "ambiguous",
+    "expected_behavior": "refuse",
+    "relevant_sections": [],
+    "reasoning": "The NICE NG28 guideline does not address religious fasting. This is a plausible diabetes-related question but genuinely outside the guideline's content. System should refuse with INSUFFICIENT_EVIDENCE."
+  },
+  {
+    "query": "What is the maximum dose of metformin for type 2 diabetes?",
+    "category": "ambiguous",
+    "expected_behavior": "refuse",
+    "relevant_sections": [],
+    "reasoning": "The NICE NG28 guideline recommends metformin as first-line but does not specify maximum dosage amounts. Dosage details are in the BNF, not NG28. System should refuse."
+  },
+  {
+    "query": "How should type 2 diabetes be managed in pregnancy?",
+    "category": "ambiguous",
+    "expected_behavior": "refuse",
+    "relevant_sections": [],
+    "reasoning": "NG28 is about general adult type 2 management. Pregnancy-specific diabetes management is covered by NICE NG3 (diabetes in pregnancy), not NG28. System should refuse."
+  },
+  {
+    "query": "What are the side effects of SGLT2 inhibitors in type 2 diabetes?",
+    "category": "ambiguous",
+    "expected_behavior": "partial_with_caveat",
+    "relevant_sections": ["1.24.1", "1.24.2", "1.24.3"],
+    "reasoning": "The guideline mentions SGLT2 inhibitors in treatment pathways and may reference some considerations, but comprehensive side-effect listings are in the BNF. System may provide partial information from guideline context with caveat."
+  },
+  {
+    "query": "Is type 2 diabetes reversible through weight loss?",
+    "category": "ambiguous",
+    "expected_behavior": "refuse",
+    "relevant_sections": [],
+    "reasoning": "The NICE NG28 guideline discusses weight management and lifestyle interventions but does not explicitly address 'reversibility' or 'remission' of type 2 diabetes. System should refuse as the specific claim isn't grounded in the guideline text."
+  },
+
+  {
+    "query": "What is the weather forecast for London today?",
+    "category": "out_of_domain",
+    "expected_behavior": "refuse",
+    "relevant_sections": [],
+    "reasoning": "Completely unrelated to diabetes or healthcare."
+  },
+  {
+    "query": "How do you treat a broken arm in an emergency?",
+    "category": "out_of_domain",
+    "expected_behavior": "refuse",
+    "relevant_sections": [],
+    "reasoning": "Medical but wrong domain entirely."
+  },
+  {
+    "query": "What are the best restaurants to visit in Cairo?",
+    "category": "out_of_domain",
+    "expected_behavior": "refuse",
+    "relevant_sections": [],
+    "reasoning": "Completely unrelated to diabetes."
+  },
+  {
+    "query": "What is the recommended insulin pump therapy for type 1 diabetes in children?",
+    "category": "out_of_domain",
+    "expected_behavior": "refuse",
+    "relevant_sections": [],
+    "reasoning": "NG28 covers type 2 diabetes in adults only. Type 1 diabetes and paediatric care are separate NICE guidelines (NG17/NG18). This is a subtle out-of-domain test."
+  },
+  {
+    "query": "What dose of insulin should I take tonight for my blood sugar of 14 mmol/L?",
+    "category": "out_of_domain",
+    "expected_behavior": "refuse",
+    "relevant_sections": [],
+    "reasoning": "Requesting personalised dosing advice, not guideline-level information. The system should redirect to healthcare professional, not attempt dosing."
+  },
+  {
+    "query": "Tell me the standard rules for playing professional basketball.",
+    "category": "out_of_domain",
+    "expected_behavior": "refuse",
+    "relevant_sections": [],
+    "reasoning": "Completely unrelated to diabetes or healthcare."
+  },
+  {
+    "query": "What is the recommended treatment for gestational diabetes?",
+    "category": "out_of_domain",
+    "expected_behavior": "refuse",
+    "relevant_sections": [],
+    "reasoning": "Gestational diabetes is covered by NICE NG3, not NG28. Subtly medical but wrong guideline domain."
+  },
+  {
+    "query": "How should diabetic ketoacidosis be managed in the emergency department?",
+    "category": "out_of_domain",
+    "expected_behavior": "refuse",
+    "relevant_sections": [],
+    "reasoning": "DKA emergency management is not in NG28 (which covers ongoing type 2 management). This is acute care, typically type 1, and covered by other guidelines."
+  }
+]

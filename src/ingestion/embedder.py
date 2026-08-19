@@ -23,28 +23,62 @@ from src.config import (
 from src.ingestion.chunker import Chunk
 
 _model: SentenceTransformer | None = None
+_model_name: str | None = None
 
 
 def get_embedding_model() -> SentenceTransformer:
-    global _model
-    if _model is None:
-        _model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+    global _model, _model_name
+    from src.config import EMBEDDING_MODEL_NAME
+    if _model is None or _model_name != EMBEDDING_MODEL_NAME:
+        try:
+            _model = SentenceTransformer(EMBEDDING_MODEL_NAME, local_files_only=True)
+        except Exception:
+            _model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+        _model_name = EMBEDDING_MODEL_NAME
     return _model
 
 
+_qdrant_client: QdrantClient | None = None
+
+
 def get_qdrant_client() -> QdrantClient:
+    global _qdrant_client
+    if _qdrant_client is not None:
+        return _qdrant_client
+
+    import socket
     try:
-        client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT, timeout=2.0)
-        client.get_collections()
-        return client
+        with socket.create_connection((QDRANT_HOST, QDRANT_PORT), timeout=0.2):
+            client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT, timeout=2.0)
+            client.get_collections()
+            _qdrant_client = client
+            return client
     except Exception:
         from src.config import PROJECT_ROOT
-        return QdrantClient(path=str(PROJECT_ROOT / "data" / "qdrant_db"))
-
+        _qdrant_client = QdrantClient(path=str(PROJECT_ROOT / "data" / "qdrant_db"))
+        return _qdrant_client
 
 
 def ensure_collection(client: QdrantClient) -> None:
     existing = [c.name for c in client.get_collections().collections]
+    if QDRANT_COLLECTION in existing:
+        info = client.get_collection(QDRANT_COLLECTION)
+        # Check current vector size
+        vectors_config = info.config.params.vectors
+        if hasattr(vectors_config, "size"):
+            curr_size = vectors_config.size
+        elif isinstance(vectors_config, dict):
+            curr_size = vectors_config.get("size")
+        else:
+            curr_size = None
+
+        if curr_size is not None and curr_size != EMBEDDING_DIM:
+            print(f"Recreating collection {QDRANT_COLLECTION}: dimension changed from {curr_size} to {EMBEDDING_DIM}")
+            client.delete_collection(QDRANT_COLLECTION)
+            if hasattr(client, "_client") and hasattr(client._client, "collections"):
+                client._client.collections.pop(QDRANT_COLLECTION, None)
+            existing.remove(QDRANT_COLLECTION)
+
     if QDRANT_COLLECTION not in existing:
         client.create_collection(
             collection_name=QDRANT_COLLECTION,
@@ -61,10 +95,8 @@ def index_chunks(chunks: list[Chunk]) -> int:
     client = get_qdrant_client()
     ensure_collection(client)
 
-    # bge models expect a "passage:" style prefix isn't required for bge-small,
-    # but a light instruction prefix improves retrieval quality in practice.
     texts = [c.text for c in chunks]
-    vectors = model.encode(texts, normalize_embeddings=True, show_progress_bar=True)
+    vectors = model.encode(texts, batch_size=16, normalize_embeddings=True, show_progress_bar=True)
 
     points = [
         PointStruct(
@@ -77,6 +109,8 @@ def index_chunks(chunks: list[Chunk]) -> int:
                 "section_title": chunks[i].section_title,
                 "page_number": chunks[i].page_number,
                 "text": chunks[i].text,
+                "related_sections": chunks[i].related_sections,
+                "patient_subgroup_tags": chunks[i].patient_subgroup_tags,
             },
         )
         for i in range(len(chunks))
@@ -89,5 +123,7 @@ def index_chunks(chunks: list[Chunk]) -> int:
 def embed_query(query: str):
     """Embed a single user query for search."""
     model = get_embedding_model()
-    return model.encode([f"Represent this sentence for searching relevant passages: {query}"], normalize_embeddings=True)[0].tolist()
-
+    return model.encode(
+        [f"Represent this sentence for searching relevant passages: {query}"],
+        normalize_embeddings=True,
+    )[0].tolist()

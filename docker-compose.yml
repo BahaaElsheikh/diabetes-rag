@@ -8,6 +8,7 @@ services:
       - "6334:6334"   # gRPC
     volumes:
       - qdrant_data:/qdrant/storage
+    restart: unless-stopped
 
   api:
     build: .
@@ -17,8 +18,21 @@ services:
       - qdrant
     environment:
       - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     volumes:
       - ./data:/app/data
+    restart: unless-stopped
+
+  bot:
+    build: .
+    command: python -m src.telegram_bot.bot
+    depends_on:
+      - api
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - API_URL=http://api:8000/ask
+    restart: unless-stopped
 
 volumes:
   qdrant_data:

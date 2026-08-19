@@ -6,23 +6,31 @@ from __future__ import annotations
 
 import time
 from sentence_transformers import CrossEncoder
+from src.config import RERANKER_MODEL_NAME
 from src.retrieval.search import RetrievedChunk
 
 _reranker_model: CrossEncoder | None = None
+_loaded_model_name: str | None = None
 
 
 def get_reranker() -> CrossEncoder:
-    global _reranker_model
-    if _reranker_model is None:
-        _reranker_model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    global _reranker_model, _loaded_model_name
+    from src.config import RERANKER_MODEL_NAME
+
+    if _reranker_model is None or _loaded_model_name != RERANKER_MODEL_NAME:
+        try:
+            _reranker_model = CrossEncoder(RERANKER_MODEL_NAME, local_files_only=True)
+        except Exception:
+            _reranker_model = CrossEncoder(RERANKER_MODEL_NAME)
+        _loaded_model_name = RERANKER_MODEL_NAME
     return _reranker_model
 
 
 def rerank(
     query: str,
     candidates: list[RetrievedChunk],
-    top_k: int = 5,
-    score_threshold: float | None = -1.0,
+    top_k: int | None = None,
+    score_threshold: float | None = None,
 ) -> list[RetrievedChunk]:
     """Rerank candidates using a Cross-Encoder model.
 
@@ -38,6 +46,12 @@ def rerank(
     if not candidates:
         return []
 
+    from src.config import RERANK_SCORE_THRESHOLD, RERANK_TOP_K
+    if top_k is None:
+        top_k = RERANK_TOP_K
+    if score_threshold is None:
+        score_threshold = RERANK_SCORE_THRESHOLD
+
     model = get_reranker()
     pairs = [[query, c.text] for c in candidates]
     scores = model.predict(pairs)
@@ -50,6 +64,8 @@ def rerank(
             section_title=c.section_title,
             page_number=c.page_number,
             score=float(s),
+            related_sections=c.related_sections,
+            patient_subgroup_tags=c.patient_subgroup_tags,
         )
         for c, s in zip(candidates, scores)
     ]
@@ -60,3 +76,22 @@ def rerank(
         reranked = [c for c in reranked if c.score >= score_threshold]
 
     return reranked[:top_k]
+
+
+if __name__ == "__main__":
+    import sys
+    from src.retrieval.search import search
+
+    query = " ".join(sys.argv[1:]) or "HbA1c target for type 2 diabetes"
+    results = search(query, use_reranker=True)
+
+    if not results:
+        print(f"Query: {query!r}")
+        print("Status: Refused (no results above threshold)")
+    else:
+        print(f"Query: {query!r}")
+        print(f"Status: Accepted ({len(results)} results)")
+        for r in results:
+            print(f"  rerank_score={r.score:.4f}  {r.citation()}")
+            print(f"    {r.text[:150]}...\n")
+

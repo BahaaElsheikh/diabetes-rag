@@ -1,0 +1,466 @@
+{
+  "timestamp": "2026-08-18T09:57:03.193828+00:00",
+  "label": "cand_k_8",
+  "mode": "reranker",
+  "config": {
+    "collection_name": "diabetes_guidelines",
+    "top_k": 5,
+    "score_threshold": 0.35,
+    "use_reranker": true,
+    "candidate_k": 8,
+    "reranker_model": "cross-encoder/ms-marco-TinyBERT-L-2-v2"
+  },
+  "metrics": {
+    "mean_precision_at_k": 0.24,
+    "mean_recall_at_k": 0.7556,
+    "mean_f1_at_k": 0.3524,
+    "refusal_accuracy": 1.0,
+    "mean_latency_ms": 13806.2,
+    "in_scope_queries": 15,
+    "out_of_scope_queries": 5
+  },
+  "per_query": [
+    {
+      "query": "What is the recommended target HbA1c level for adults with type 2 diabetes?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.5.7",
+        "1.5.8"
+      ],
+      "returned_sections": [
+        "1.5.10",
+        "1.5.9",
+        "1.5.5",
+        "1.5.8",
+        "1.5.1"
+      ],
+      "top_score": 10.2582,
+      "all_scores": [
+        10.2582,
+        8.9306,
+        8.895,
+        8.7448,
+        7.9833
+      ],
+      "precision_at_k": 0.2,
+      "recall_at_k": 0.5,
+      "f1_at_k": 0.2857,
+      "latency_ms": 261118.3
+    },
+    {
+      "query": "What is the recommended first-line drug treatment for type 2 diabetes with no relevant comorbidities?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.13.1",
+        "1.13.2"
+      ],
+      "returned_sections": [
+        "1.13.1",
+        "1.13",
+        "1.25.1",
+        "1.25",
+        "1.9.5"
+      ],
+      "top_score": 6.3998,
+      "all_scores": [
+        6.3998,
+        5.7801,
+        4.8103,
+        3.6224,
+        1.3574
+      ],
+      "precision_at_k": 0.2,
+      "recall_at_k": 0.5,
+      "f1_at_k": 0.2857,
+      "latency_ms": 609.1
+    },
+    {
+      "query": "What treatment is recommended for adults with type 2 diabetes and atherosclerotic cardiovascular disease?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.11.1",
+        "1.15.1",
+        "1.27.1"
+      ],
+      "returned_sections": [
+        "1.15.1",
+        "1.27.2",
+        "1.13.2",
+        "1.26.1",
+        "1.25.1"
+      ],
+      "top_score": 9.2353,
+      "all_scores": [
+        9.2353,
+        8.686,
+        5.718,
+        5.1772,
+        4.8731
+      ],
+      "precision_at_k": 0.2,
+      "recall_at_k": 0.3333,
+      "f1_at_k": 0.25,
+      "latency_ms": 590.2
+    },
+    {
+      "query": "When should structured education be offered to adults newly diagnosed with type 2 diabetes?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.2.1"
+      ],
+      "returned_sections": [
+        "1.2.1",
+        "1.32.1",
+        "1.2.4",
+        "1.2.3",
+        "1.7.7"
+      ],
+      "top_score": 8.593,
+      "all_scores": [
+        8.593,
+        7.8574,
+        7.3034,
+        6.2943,
+        5.905
+      ],
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "f1_at_k": 0.3333,
+      "latency_ms": 1261.1
+    },
+    {
+      "query": "What nutritional advice should be provided to adults with type 2 diabetes?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.3.1",
+        "1.3.3"
+      ],
+      "returned_sections": [
+        "1.5.6",
+        "1.3.3",
+        "1.2.7",
+        "1.9.1",
+        "1.3.7"
+      ],
+      "top_score": 8.5338,
+      "all_scores": [
+        8.5338,
+        8.3999,
+        8.3424,
+        7.7634,
+        6.4479
+      ],
+      "precision_at_k": 0.2,
+      "recall_at_k": 0.5,
+      "f1_at_k": 0.2857,
+      "latency_ms": 956.9
+    },
+    {
+      "query": "How often should HbA1c levels be measured in adults with type 2 diabetes?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.5.1"
+      ],
+      "returned_sections": [
+        "1.5.1",
+        "1.5.10",
+        "1.5.8",
+        "1.5.9",
+        "1.5.7"
+      ],
+      "top_score": 9.8816,
+      "all_scores": [
+        9.8816,
+        8.6976,
+        8.1924,
+        7.0993,
+        7.0827
+      ],
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "f1_at_k": 0.3333,
+      "latency_ms": 707.3
+    },
+    {
+      "query": "Should adults with type 2 diabetes routinely self-monitor capillary blood glucose?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.6.2",
+        "1.6.3"
+      ],
+      "returned_sections": [
+        "1.6.3",
+        "1.6.5",
+        "1.6.2",
+        "1.7.1",
+        "1.7.5"
+      ],
+      "top_score": 10.0245,
+      "all_scores": [
+        10.0245,
+        9.4653,
+        9.4589,
+        8.0641,
+        7.8462
+      ],
+      "precision_at_k": 0.4,
+      "recall_at_k": 1.0,
+      "f1_at_k": 0.5714,
+      "latency_ms": 824.2
+    },
+    {
+      "query": "Which adults with type 2 diabetes should be offered continuous glucose monitoring?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.7.1"
+      ],
+      "returned_sections": [
+        "1.7.1",
+        "1.7.3",
+        "1.6.3",
+        "1.7.2",
+        "1.7.5"
+      ],
+      "top_score": 10.0168,
+      "all_scores": [
+        10.0168,
+        9.8913,
+        8.506,
+        8.3996,
+        7.4685
+      ],
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "f1_at_k": 0.3333,
+      "latency_ms": 711.3
+    },
+    {
+      "query": "What medicines should be offered to adults with type 2 diabetes who have heart failure?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.14.1",
+        "1.14.2",
+        "1.26.1"
+      ],
+      "returned_sections": [
+        "1.14.1",
+        "1.9.2",
+        "1.28.1",
+        "1.26.1",
+        "1.13.2"
+      ],
+      "top_score": 7.8042,
+      "all_scores": [
+        7.8042,
+        7.6941,
+        7.5958,
+        7.2108,
+        6.925
+      ],
+      "precision_at_k": 0.4,
+      "recall_at_k": 0.6667,
+      "f1_at_k": 0.5,
+      "latency_ms": 706.1
+    },
+    {
+      "query": "What medicines are recommended for adults with type 2 diabetes and chronic kidney disease?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.18.1",
+        "1.18.2",
+        "1.30.1"
+      ],
+      "returned_sections": [
+        "1.18.5",
+        "1.9.2",
+        "1.30.1",
+        "1.27.2",
+        "1.26.1"
+      ],
+      "top_score": 8.0196,
+      "all_scores": [
+        8.0196,
+        5.7924,
+        5.2778,
+        4.3251,
+        4.1382
+      ],
+      "precision_at_k": 0.2,
+      "recall_at_k": 0.3333,
+      "f1_at_k": 0.25,
+      "latency_ms": 1086.5
+    },
+    {
+      "query": "How should initial medicines be introduced when starting combination therapy for type 2 diabetes?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.20.2"
+      ],
+      "returned_sections": [
+        "1.20.2",
+        "1.33.2",
+        "1.21.3",
+        "1.9.5",
+        "1.9.2"
+      ],
+      "top_score": 7.6669,
+      "all_scores": [
+        7.6669,
+        5.3075,
+        4.0294,
+        1.1179,
+        0.1426
+      ],
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "f1_at_k": 0.3333,
+      "latency_ms": 740.6
+    },
+    {
+      "query": "What type of insulin is recommended as initial insulin therapy for adults with type 2 diabetes?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.33.1",
+        "1.33.2"
+      ],
+      "returned_sections": [
+        "1.33.1",
+        "1.33.2",
+        "1.32.2",
+        "1.32.1",
+        "1.35.1"
+      ],
+      "top_score": 9.2274,
+      "all_scores": [
+        9.2274,
+        9.086,
+        7.0355,
+        6.7673,
+        6.6821
+      ],
+      "precision_at_k": 0.4,
+      "recall_at_k": 1.0,
+      "f1_at_k": 0.5714,
+      "latency_ms": 738.5
+    },
+    {
+      "query": "When should a person newly diagnosed with type 2 diabetes be referred for eye screening?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.43.1"
+      ],
+      "returned_sections": [
+        "1.43.1"
+      ],
+      "top_score": 8.0292,
+      "all_scores": [
+        8.0292
+      ],
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "f1_at_k": 0.3333,
+      "latency_ms": 963.0
+    },
+    {
+      "query": "What information should be given to adults with type 2 diabetes about periodontitis risk?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.37.1"
+      ],
+      "returned_sections": [
+        "1.37.1",
+        "1.37.4",
+        "1.6.4",
+        "1.45.2"
+      ],
+      "top_score": 8.9073,
+      "all_scores": [
+        8.9073,
+        5.6553,
+        4.0402,
+        3.9224
+      ],
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "f1_at_k": 0.3333,
+      "latency_ms": 943.2
+    },
+    {
+      "query": "When should gastroparesis be suspected in an adult with type 2 diabetes?",
+      "out_of_scope": false,
+      "relevant_sections": [
+        "1.38.1",
+        "1.40.1"
+      ],
+      "returned_sections": [
+        "1.38.4",
+        "1.38.1",
+        "1.38.2",
+        "1.38.3",
+        "1.8.1"
+      ],
+      "top_score": 9.5424,
+      "all_scores": [
+        9.5424,
+        7.8224,
+        6.3604,
+        5.8661,
+        1.3865
+      ],
+      "precision_at_k": 0.2,
+      "recall_at_k": 0.5,
+      "f1_at_k": 0.2857,
+      "latency_ms": 749.8
+    },
+    {
+      "query": "What is the weather forecast for London today?",
+      "out_of_scope": true,
+      "relevant_sections": [],
+      "returned_sections": [],
+      "top_score": 0.0,
+      "all_scores": [],
+      "correctly_refused": true,
+      "latency_ms": 695.4
+    },
+    {
+      "query": "How do you treat a broken arm in an emergency?",
+      "out_of_scope": true,
+      "relevant_sections": [],
+      "returned_sections": [],
+      "top_score": 0.0,
+      "all_scores": [],
+      "correctly_refused": true,
+      "latency_ms": 713.8
+    },
+    {
+      "query": "What are the best restaurants to visit in Cairo?",
+      "out_of_scope": true,
+      "relevant_sections": [],
+      "returned_sections": [],
+      "top_score": 0.0,
+      "all_scores": [],
+      "correctly_refused": true,
+      "latency_ms": 658.9
+    },
+    {
+      "query": "What is the capital city of France?",
+      "out_of_scope": true,
+      "relevant_sections": [],
+      "returned_sections": [],
+      "top_score": 0.0,
+      "all_scores": [],
+      "correctly_refused": true,
+      "latency_ms": 609.6
+    },
+    {
+      "query": "What are the standard rules for playing professional basketball?",
+      "out_of_scope": true,
+      "relevant_sections": [],
+      "returned_sections": [],
+      "top_score": 0.0,
+      "all_scores": [],
+      "correctly_refused": true,
+      "latency_ms": 740.6
+    }
+  ]
+}
