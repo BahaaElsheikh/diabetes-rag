@@ -50,9 +50,9 @@ def get_qdrant_client() -> QdrantClient:
 
     # 1. Try configured QDRANT_HOST
     try:
-        host = QDRANT_HOST if QDRANT_HOST else "localhost"
-        with socket.create_connection((host, QDRANT_PORT), timeout=0.3):
-            client = QdrantClient(host=host, port=QDRANT_PORT, timeout=2.0)
+        host = QDRANT_HOST if QDRANT_HOST else "qdrant"
+        with socket.create_connection((host, QDRANT_PORT), timeout=3.0):
+            client = QdrantClient(host=host, port=QDRANT_PORT, timeout=5.0)
             client.get_collections()
             _qdrant_client = client
             return client
@@ -61,8 +61,8 @@ def get_qdrant_client() -> QdrantClient:
 
     # 2. Try localhost fallback
     try:
-        with socket.create_connection(("127.0.0.1", 6333), timeout=0.3):
-            client = QdrantClient(host="127.0.0.1", port=6333, timeout=2.0)
+        with socket.create_connection(("127.0.0.1", 6333), timeout=1.0):
+            client = QdrantClient(host="127.0.0.1", port=6333, timeout=5.0)
             client.get_collections()
             _qdrant_client = client
             return client
