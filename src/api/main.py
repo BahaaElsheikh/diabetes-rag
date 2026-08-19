@@ -26,17 +26,21 @@ from src.ingestion.embedder import get_qdrant_client, ensure_collection
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("diabetes_rag_api")
+import asyncio
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    logger.info("Starting Diabetes RAG API backend...")
+def _init_qdrant():
     try:
         client = get_qdrant_client()
         ensure_collection(client)
         logger.info("Qdrant collection successfully verified and ready.")
     except Exception as e:
         logger.warning(f"Could not connect or initialize Qdrant at startup: {e}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting Diabetes RAG API backend...")
+    asyncio.create_task(asyncio.to_thread(_init_qdrant))
     yield
     logger.info("Shutting down Diabetes RAG API backend...")
 

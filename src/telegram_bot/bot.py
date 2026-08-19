@@ -67,16 +67,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         api_url = os.environ.get("API_URL", f"http://127.0.0.1:{port}/ask")
 
         response = None
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    api_url,
-                    json={"query": user_query, "top_k": 5},
-                )
-        except Exception as primary_err:
-            logger.error(f"Error calling RAG API at {api_url}: {primary_err}", exc_info=True)
+        last_err = None
+        for attempt in range(3):
+            try:
+                async with httpx.AsyncClient(timeout=45.0) as client:
+                    response = await client.post(
+                        api_url,
+                        json={"query": user_query, "top_k": 5},
+                    )
+                if response is not None and response.status_code == 200:
+                    break
+            except Exception as primary_err:
+                last_err = primary_err
+                logger.warning(f"Attempt {attempt + 1}/3 calling API ({api_url}) failed: {primary_err}")
+                if attempt < 2:
+                    import asyncio as aio
+                    await aio.sleep(3.0)
+
+        if response is None:
+            logger.error(f"Error calling RAG API at {api_url}: {last_err}", exc_info=True)
             await update.message.reply_text(
-                f"⚠️ Error communicating with internal RAG backend ({api_url}): {str(primary_err)}"
+                "⏳ *RAG Backend Initializing*\n\n"
+                "The clinical knowledge base is currently finishing its startup sequence. "
+                "Please wait 10–20 seconds and send your question again.",
+                parse_mode="Markdown"
             )
             return
 
