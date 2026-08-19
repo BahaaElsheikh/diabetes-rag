@@ -44,8 +44,8 @@ def search(
 
     score_threshold filters out weak matches - this is the retrieval-side
     half of the Safety Layer's "insufficient evidence -> refuse" behavior.
-    """
     client = get_qdrant_client()
+    ensure_collection(client)
 
     if candidate_k is None:
         from src.config import RERANK_CANDIDATE_K
@@ -54,7 +54,7 @@ def search(
         cand_k = candidate_k
 
     limit_k = cand_k if use_reranker else top_k
-    thresh = 0.0 if use_reranker else score_threshold
+    thresh = None if use_reranker else score_threshold
 
     if use_query_rewrite:
         from src.retrieval.query_rewrite import rewrite_query
