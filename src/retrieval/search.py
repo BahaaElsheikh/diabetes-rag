@@ -97,7 +97,8 @@ def search(
 
     if use_reranker and candidates:
         from src.retrieval.rerank import rerank
-        return rerank(query, candidates, top_k=top_k, score_threshold=score_threshold)
+        from src.config import RERANK_SCORE_THRESHOLD
+        return rerank(query, candidates, top_k=top_k, score_threshold=RERANK_SCORE_THRESHOLD)
 
     return candidates[:top_k]
 

@@ -27,9 +27,9 @@ EMBEDDING_MODEL_NAME = "BAAI/bge-large-en-v1.5"
 EMBEDDING_DIM = 1024  # must match the model above
 
 # --- Reranker (Optimized Configuration) ---
-RERANK_CANDIDATE_K = 5
+RERANK_CANDIDATE_K = 15
 RERANK_TOP_K = 5
-RERANK_SCORE_THRESHOLD = 0.5
+RERANK_SCORE_THRESHOLD = -2.0
 RERANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 # --- Chunking ---
