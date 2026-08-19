@@ -64,7 +64,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.chat.send_action(action="typing")
 
         port = os.environ.get("PORT", "8000")
-        api_url = os.environ.get("API_URL", f"http://127.0.0.1:{port}/ask")
+        raw_api_url = os.environ.get("API_URL", f"http://127.0.0.1:{port}/ask")
+        if ("127.0.0.1:8000" in raw_api_url or "localhost:8000" in raw_api_url) and port != "8000":
+            api_url = raw_api_url.replace("127.0.0.1:8000", f"127.0.0.1:{port}").replace("localhost:8000", f"127.0.0.1:{port}")
+        else:
+            api_url = raw_api_url
 
         response = None
         last_err = None
