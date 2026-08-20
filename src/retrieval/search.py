@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from src.config import QDRANT_COLLECTION, RERANK_CANDIDATE_K
-from src.ingestion.embedder import embed_query, get_qdrant_client
+from src.ingestion.embedder import embed_query, get_qdrant_client, ensure_collection
 
 
 from dataclasses import dataclass, field
@@ -46,6 +46,7 @@ def search(
     half of the Safety Layer's "insufficient evidence -> refuse" behavior.
     """
     client = get_qdrant_client()
+    ensure_collection(client)
 
     if candidate_k is None:
         from src.config import RERANK_CANDIDATE_K
@@ -54,7 +55,7 @@ def search(
         cand_k = candidate_k
 
     limit_k = cand_k if use_reranker else top_k
-    thresh = 0.0 if use_reranker else score_threshold
+    thresh = None if use_reranker else score_threshold
 
     if use_query_rewrite:
         from src.retrieval.query_rewrite import rewrite_query
@@ -97,7 +98,8 @@ def search(
 
     if use_reranker and candidates:
         from src.retrieval.rerank import rerank
-        return rerank(query, candidates, top_k=top_k, score_threshold=score_threshold)
+        from src.config import RERANK_SCORE_THRESHOLD
+        return rerank(query, candidates, top_k=top_k, score_threshold=RERANK_SCORE_THRESHOLD)
 
     return candidates[:top_k]
 

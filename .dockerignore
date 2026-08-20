@@ -1,0 +1,57 @@
+# Git and VCS
+.git/
+.gitignore
+.github/
+
+# Python artifacts and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Secrets and environment files
+.env
+.env.*
+!.env.example
+
+# IDEs and OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Scratch, testing, and temporary directories
+scratch/
+*.log
+data/qdrant_db/
+data/raw_pdfs/
+data/eval/
+data/PROJECT_STATUS_REPORT.md
+run_bge_large_experiment.py
+verify_chunks.py
+verify_test_queries.py
+
+# Keep processed chunks for vector database initialization
+!data/processed/
+!data/processed/chunks.json

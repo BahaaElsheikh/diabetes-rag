@@ -70,31 +70,47 @@ def get_qdrant_client() -> QdrantClient:
     return _qdrant_client
 
 
+import threading
+
+_collection_lock = threading.Lock()
+_collection_ensured = False
+
+
 def ensure_collection(client: QdrantClient) -> None:
-    existing = [c.name for c in client.get_collections().collections]
-    if QDRANT_COLLECTION in existing:
-        info = client.get_collection(QDRANT_COLLECTION)
-        # Check current vector size
-        vectors_config = info.config.params.vectors
-        if hasattr(vectors_config, "size"):
-            curr_size = vectors_config.size
-        elif isinstance(vectors_config, dict):
-            curr_size = vectors_config.get("size")
-        else:
-            curr_size = None
+    global _collection_ensured
+    if _collection_ensured:
+        return
 
-        if curr_size is not None and curr_size != EMBEDDING_DIM:
-            print(f"Recreating collection {QDRANT_COLLECTION}: dimension changed from {curr_size} to {EMBEDDING_DIM}")
-            client.delete_collection(QDRANT_COLLECTION)
-            if hasattr(client, "_client") and hasattr(client._client, "collections"):
-                client._client.collections.pop(QDRANT_COLLECTION, None)
-            existing.remove(QDRANT_COLLECTION)
+    with _collection_lock:
+        if _collection_ensured:
+            return
 
-    if QDRANT_COLLECTION not in existing:
-        client.create_collection(
-            collection_name=QDRANT_COLLECTION,
-            vectors_config=VectorParams(size=EMBEDDING_DIM, distance=Distance.COSINE),
-        )
+        try:
+            existing = [c.name for c in client.get_collections().collections]
+        except Exception as err:
+            print(f"Error fetching collections: {err}")
+            existing = []
+
+        if QDRANT_COLLECTION in existing:
+            try:
+                info = client.get_collection(QDRANT_COLLECTION)
+                vectors_config = info.config.params.vectors
+                curr_size = getattr(vectors_config, "size", None) or (vectors_config.get("size") if isinstance(vectors_config, dict) else None)
+                if curr_size is not None and curr_size != EMBEDDING_DIM:
+                    print(f"Recreating collection {QDRANT_COLLECTION}: dimension changed from {curr_size} to {EMBEDDING_DIM}")
+                    client.delete_collection(QDRANT_COLLECTION)
+                    existing.remove(QDRANT_COLLECTION)
+            except Exception as e:
+                print(f"Collection dimension check warning: {e}")
+
+        if QDRANT_COLLECTION not in existing:
+            try:
+                client.create_collection(
+                    collection_name=QDRANT_COLLECTION,
+                    vectors_config=VectorParams(size=EMBEDDING_DIM, distance=Distance.COSINE),
+                )
+            except Exception as e:
+                print(f"Create collection error: {e}")
 
     # Check if empty, auto-populate if 0 points
     try:
@@ -103,7 +119,7 @@ def ensure_collection(client: QdrantClient) -> None:
             from src.config import CHUNKS_JSON_PATH
             if CHUNKS_JSON_PATH.exists():
                 import json
-                from src.ingestion.chunker import Chunk
+                from src.models.chunk import Chunk
                 print(f"Auto-populating empty collection {QDRANT_COLLECTION} from {CHUNKS_JSON_PATH}...")
                 with open(CHUNKS_JSON_PATH, "r", encoding="utf-8") as f:
                     raw_data = json.load(f)
@@ -111,6 +127,8 @@ def ensure_collection(client: QdrantClient) -> None:
                 _auto_index_chunks(client, chunks)
     except Exception as e:
         print(f"Auto-population check warning: {e}")
+
+        _collection_ensured = True
 
 
 def _auto_index_chunks(client: QdrantClient, chunks: list[Chunk]) -> int:

@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -21,11 +22,30 @@ from src.generation.llm_client import generate_response
 from src.generation.prompts import STRICT_GROUNDING_SYSTEM_PROMPT, GroundedAnswer, build_user_prompt
 from src.models.patient import PatientLabData
 from src.retrieval.search import search
+from src.ingestion.embedder import get_qdrant_client, ensure_collection
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("diabetes_rag_api")
+import asyncio
 
-app = FastAPI(title="Diabetes RAG - Day 3")
+def _init_qdrant():
+    try:
+        client = get_qdrant_client()
+        ensure_collection(client)
+        logger.info("Qdrant collection successfully verified and ready.")
+    except Exception as e:
+        logger.warning(f"Could not connect or initialize Qdrant at startup: {e}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting Diabetes RAG API backend...")
+    asyncio.create_task(asyncio.to_thread(_init_qdrant))
+    yield
+    logger.info("Shutting down Diabetes RAG API backend...")
+
+
+app = FastAPI(title="Diabetes RAG - Day 3", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
