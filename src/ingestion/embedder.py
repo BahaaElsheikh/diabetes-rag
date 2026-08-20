@@ -112,6 +112,21 @@ def ensure_collection(client: QdrantClient) -> None:
             except Exception as e:
                 print(f"Create collection error: {e}")
 
+        # Check if empty, auto-populate if 0 points
+        try:
+            count_res = client.count(QDRANT_COLLECTION)
+            if count_res.count == 0:
+                from src.config import CHUNKS_JSON_PATH
+                if CHUNKS_JSON_PATH.exists():
+                    import json
+                    from src.ingestion.chunker import Chunk
+                    print(f"Auto-populating empty collection {QDRANT_COLLECTION} from {CHUNKS_JSON_PATH}...")
+                    with open(CHUNKS_JSON_PATH, "r", encoding="utf-8") as f:
+                        raw_data = json.load(f)
+                    chunks = [Chunk(**d) for d in raw_data]
+                    _auto_index_chunks(client, chunks)
+        except Exception as e:
+            print(f"Auto-population check warning: {e}")
     # Check if empty, auto-populate if 0 points
     try:
         count_res = client.count(QDRANT_COLLECTION)
@@ -119,7 +134,7 @@ def ensure_collection(client: QdrantClient) -> None:
             from src.config import CHUNKS_JSON_PATH
             if CHUNKS_JSON_PATH.exists():
                 import json
-                from src.models.chunk import Chunk
+                from src.ingestion.chunker import Chunk
                 print(f"Auto-populating empty collection {QDRANT_COLLECTION} from {CHUNKS_JSON_PATH}...")
                 with open(CHUNKS_JSON_PATH, "r", encoding="utf-8") as f:
                     raw_data = json.load(f)
